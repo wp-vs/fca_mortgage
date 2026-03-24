@@ -79,17 +79,31 @@ def is_mortgage_permission(permission_text: str) -> bool:
 
 
 def extract_mortgage_permissions(permissions_data: dict) -> list[str]:
-    """Extract mortgage-related permissions from API response."""
+    """Extract mortgage-related permissions from API response.
+
+    Handles two known response formats:
+      - List format: Data is a list of dicts with "Regulated Activity" keys
+      - Dict format: Data is a dict where keys are activity names with nested details
+    """
     mortgage_perms = []
     data = permissions_data.get("Data", [])
-    for perm in data:
-        invest_type = perm.get("Investment Type", "")
-        regulated_activity = perm.get("Regulated Activity", "")
-        combined = f"{regulated_activity} - {invest_type}".strip(" -")
-        if is_mortgage_permission(combined):
-            status = perm.get("Status", "")
-            if status.lower() in ("authorised", "effective", ""):
-                mortgage_perms.append(combined)
+
+    if isinstance(data, list):
+        # List format: [{"Regulated Activity": "...", "Investment Type": "...", ...}]
+        for perm in data:
+            invest_type = perm.get("Investment Type", "")
+            regulated_activity = perm.get("Regulated Activity", "")
+            combined = f"{regulated_activity} - {invest_type}".strip(" -")
+            if is_mortgage_permission(combined):
+                status = perm.get("Status", "")
+                if status.lower() in ("authorised", "effective", ""):
+                    mortgage_perms.append(combined)
+    elif isinstance(data, dict):
+        # Dict format: {"Arranging (bringing about) regulated mortgage contracts": [...]}
+        for activity_name, details in data.items():
+            if is_mortgage_permission(activity_name):
+                mortgage_perms.append(activity_name)
+
     return mortgage_perms
 
 
