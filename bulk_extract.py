@@ -45,10 +45,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Search queries designed to cover all firms in the register.
-# Single characters catch most firms; two-letter combos and digits fill gaps.
+# The FCA API requires at least 2 characters, so we use two-letter combos
+# plus common business suffixes and digit pairs to maximise coverage.
 SEARCH_QUERIES = (
-    list(string.ascii_lowercase)
-    + [str(d) for d in range(10)]
+    [a + b for a in string.ascii_lowercase for b in string.ascii_lowercase]
+    + [str(d1) + str(d2) for d1 in range(10) for d2 in range(10)]
     + ["ltd", "limited", "plc", "llp", "inc", "group", "partners", "associates"]
 )
 
