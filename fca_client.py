@@ -9,13 +9,13 @@ import requests
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://register.fca.org.uk/services/V0.1"
-RATE_LIMIT_DELAY = 1.0  # seconds between requests to stay under rate limit
+RATE_LIMIT_DELAY = 0.25  # seconds between requests (4 req/s, API allows 5/s)
 
 
 class FCAClient:
     """Client for the FCA Financial Services Register API."""
 
-    def __init__(self, email: str, api_key: str):
+    def __init__(self, email: str, api_key: str, rate_limit: float | None = None):
         self.session = requests.Session()
         self.session.headers.update({
             "X-Auth-Email": email,
@@ -23,13 +23,16 @@ class FCAClient:
             "Accept": "application/json",
         })
         self._last_request_time = 0.0
+        self._rate_limit_delay = rate_limit if rate_limit is not None else RATE_LIMIT_DELAY
+        self._request_count = 0
 
     def _rate_limit(self):
         """Enforce rate limiting between requests."""
         elapsed = time.time() - self._last_request_time
-        if elapsed < RATE_LIMIT_DELAY:
-            time.sleep(RATE_LIMIT_DELAY - elapsed)
+        if elapsed < self._rate_limit_delay:
+            time.sleep(self._rate_limit_delay - elapsed)
         self._last_request_time = time.time()
+        self._request_count += 1
 
     def _get(self, url: str, params: Optional[dict] = None) -> Optional[dict]:
         """Make a rate-limited GET request."""
